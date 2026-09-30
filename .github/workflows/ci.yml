@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  database:
+    name: Database (migrations, seed, tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start database (applies migrations and seed)
+        run: supabase db start
+      - name: Lint
+        run: supabase db lint --level warning
+      - name: Tests
+        run: supabase test db
+
+  functions:
+    name: Edge functions (format, lint, types)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno fmt --check --line-width 100 supabase/functions
+      - run: deno lint supabase/functions
+      - name: Type-check
+        run: |
+          for f in create-payment stripe-webhook revenuecat-webhook; do
+            deno check --config supabase/functions/$f/deno.json supabase/functions/$f/index.ts
+          done
