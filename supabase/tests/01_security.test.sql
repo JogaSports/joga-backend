@@ -48,7 +48,7 @@ select throws_ok(
 );
 
 select lives_ok(
-  $$ update public.profiles set position = 'Striker' where id = tests.user_id(1) $$,
+  $$ update public.profiles set position = 'striker', foot = 'left' where id = tests.user_id(1) $$,
   'players can edit their own profile'
 );
 

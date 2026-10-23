@@ -1,20 +1,36 @@
 name: Deploy
 
-# Deploys to the production Supabase project when main changes.
-# Repository secrets needed: SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD,
-# SUPABASE_PROJECT_ID. Seed data is never pushed to production.
+# Two Supabase projects, two GitHub environments:
+#
+#   staging     deploys automatically on every push to main
+#   production  deploys only when you run this workflow by hand and choose
+#               "production" (Actions -> Deploy -> Run workflow). Add yourself
+#               as a required reviewer on the production environment so it
+#               also waits for approval.
+#
+# Each GitHub environment holds its own secrets with the same names:
+#   SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD, SUPABASE_PROJECT_ID
+#
+# Seed data is never pushed to a hosted project.
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      target:
+        description: Where to deploy
+        type: choice
+        options: [staging, production]
+        default: staging
 
-concurrency: deploy-production
+concurrency: deploy-${{ github.event.inputs.target || 'staging' }}
 
 jobs:
   deploy:
+    name: Deploy to ${{ github.event.inputs.target || 'staging' }}
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ github.event.inputs.target || 'staging' }}
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
@@ -25,5 +41,12 @@ jobs:
         with:
           version: latest
       - run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
-      - run: supabase db push
-      - run: supabase functions deploy
+      - name: Show pending migrations
+        run: supabase migration list
+      - name: Push migrations
+        run: supabase db push
+      # Only the Joga+ webhook for now. The Stripe functions (create-payment,
+      # stripe-webhook) stay in the repo but aren't deployed until the PO
+      # decides how bookings are paid. Add them to this line then.
+      - name: Deploy edge functions
+        run: supabase functions deploy revenuecat-webhook

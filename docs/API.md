@@ -40,21 +40,30 @@ try {
 | `game_not_started` | Results before kick-off |
 | `game_cancelled` | Result for a cancelled game |
 | `invalid_lines` / `player_not_booked` / `potm_not_in_game` | Bad match sheet |
-| `members_only` | Joga+ feature |
+| `members_only` | Joga+ feature (streak freezes) |
 | `no_freezes_left` | Streak freeze already used this month |
 | `invalid_metric` | Leaderboard metric not recognised |
 | `admins_only` | Admin data |
 | `organiser_has_games` / `has_upcoming_bookings` | Account deletion blocked |
+| `name_required` / `city_not_found` | Profile set-up |
+| `cannot_report_self` / `cannot_block_self` / `player_not_found` | Safety |
+| `too_many_reports` | More than 10 reports in a day |
+| `invalid_period` | Impact period not `month`, `season` or `since_launch` |
 
 ## Games — `GamesRepository`
 
 ### `game_listing` (view)
 
 Games with venue, organiser and live spaces. Columns: `id, sport, format,
-venue_id, venue_name, city_id, city_name, address, surface, parking,
-photo_url, pitch, starts_at, duration_minutes, level, tags, price_pence,
-capacity, booked, spaces_left, organiser_id, organiser_first_name,
-organiser_last_initial, organiser_games_run, status`.
+venue_id, venue_name, city_id, city_name, in_wales, address, surface,
+parking, facilities, photo_url, pitch, starts_at, duration_minutes, tags,
+price_pence, capacity, booked, spaces_left, organiser_id,
+organiser_first_name, organiser_last_initial, organiser_games_run, status`.
+
+- `city_id`: `cardiff`, `swansea`, `newport`, `wrexham`, `bristol`
+- `tags`: `beginner`, `womens`, `mixed`, `walking`, `casual`
+- `facilities`: `step_free`, `accessible_toilet`, `changing_rooms`,
+  `defibrillator`, `first_aid`, `floodlights`, `parking`
 
 ```dart
 // Find screen
@@ -63,14 +72,14 @@ supabase.from('game_listing').select()
   .eq('status', 'scheduled')
   .gt('starts_at', DateTime.now().toIso8601String())
   .eq('format', 'five_a_side')        // optional filters
-  .contains('tags', ['over_30s'])
+  .contains('tags', ['walking'])
   .lte('price_pence', 699)
   .order('starts_at');
 ```
 
 | Function | Returns | Used for |
 |---|---|---|
-| `recommended_games(p_limit = 3)` | `game_listing` rows | Home "For you": player's city, level or casual, not full, not booked |
+| `recommended_games(p_limit = 3)` | `game_listing` rows | Home "For you": player's town, not full, not booked, not run by someone they've blocked |
 | `my_upcoming_games()` | `game_listing` rows | My Games upcoming, Home next game |
 | `game_players(p_game)` | `player_id, first_name, last_initial, avatar_url` | Who's playing (details, game day) |
 | `booked_count(p_game)` | integer | Spaces taken, including live holds |
@@ -107,14 +116,19 @@ Errors: `{ "error": "hold_not_found", "message": "..." }` with HTTP 409.
 
 | Call | Returns | Used for |
 |---|---|---|
-| `from('profiles').select().eq('id', uid)` | profile | Current player. Players can update `first_name, last_name, city_id, level, position, avatar_url` |
+| `from('profiles').select().eq('id', uid)` | profile | Current player. Players can update `first_name, last_name, city_id, position, foot, avatar_url` |
+| `complete_profile(p_first_name, p_last_name, p_city, p_position, p_foot)` | profile | End of sign-up. Stamps `age_confirmed_at` and `conduct_agreed_at`. While `age_confirmed_at` is null the app shows profile set-up |
+| `my_reliability()` | integer 0–100 | "98% reliable": share of booked, played games the player turned up to |
 | `is_member()` | boolean | Joga+ status |
 | `player_stats(p_player, p_period)` | `games, goals, assists, potm, wins` | `p_period`: `career`, `season` (from 1 Aug), `month` |
 | `my_form(p_limit = 10)` | `game_id, starts_at, goals, assists, won` oldest first | Form chart |
 | `my_streak()` | `current_weeks, best_weeks, played_this_week, last_12, week_ends_at, freezes_left, next_reward_weeks, next_reward_pence` | Streak, Home nudge |
 | `use_streak_freeze()` | – | Joga+ |
-| `my_member_stats()` | `city_rank, best_venue, involvements_per_game, potm_rate_percent` | Joga+ deeper stats |
+| `my_member_stats()` | `city_rank, best_venue, involvements_per_game, potm_rate_percent` | Deeper stats. Free for everyone (name kept for compatibility) |
 | `delete_my_account()` | – | Required by Apple |
+
+Profile enums: `position` is `goalkeeper | defender | midfielder | winger |
+striker`; `foot` is `left | right | both`.
 
 **Post-game** for a game: `match_results` (score, `potm_id`) +
 `match_lines` for the player (team, goals, assists) + `player_rewards`
@@ -161,6 +175,44 @@ Set the RevenueCat app user id to the Supabase user id. The
 `revenuecat-webhook` function updates `memberships`; the app reads
 `is_member()` or listens on `memberships`.
 
+## Safety — `SafetyRepository`
+
+| Function | Notes |
+|---|---|
+| `report_player(p_player, p_reason, p_details = '', p_game = null)` | Reasons: `abuse`, `discrimination`, `violence`, `unsafe_play`, `no_show`, `other`. Players can't read reports afterwards (not even their own) |
+| `block_player(p_player)` / `unblock_player(p_player)` | Blocking hides the organiser's games from "For you" |
+| `my_blocked_players()` | `player_id, first_name, last_name, blocked_at` for Settings → Blocked players |
+
+Admins read `reports` directly (row-level security allows admins only) and
+set `status` (`open`, `reviewed`, `actioned`), `admin_notes`, `reviewed_at`.
+
+## Impact — `ImpactRepository`
+
+`impact_dashboard(p_period)` with `month`, `season` (from 1 August) or
+`since_launch`. Admins only. Returns one JSON object; totals only, no
+player ids or names:
+
+```json
+{
+  "period": "season",
+  "active_players": 33, "games_played": 39, "player_hours": 199,
+  "new_players": 3, "returners_percent": null, "retention_percent": 100,
+  "women_percent": 9, "womens_games": 5, "walking_games": 5,
+  "average_fill_percent": 53,
+  "monthly_active": [{ "year": 2026, "month": 10, "players": 30 }],
+  "towns": [{ "city_id": "swansea", "players": 5, "games": 10, "growth_percent": 25 }],
+  "sessions": [{ "type": "open", "percent": 74 }]
+}
+```
+
+- `returners_percent` is null until sign-up asks "played organised football
+  in the last year?". Hide the tile while it's null.
+- `women_percent` is the share of active players who played in a women's
+  game. Gender is not collected.
+- `growth_percent` is null for `since_launch`, or when a town had no
+  players in the previous period.
+- Session `type`: `open`, `womens`, `beginner`, `walking`.
+
 ## Admin — `AdminRepository`
 
 `admin_games(p_from = now - 1 day, p_to = now + 7 days)`: `game_id,
@@ -173,7 +225,24 @@ directly (row-level security allows admins only).
 
 Supabase Auth with Apple, Google and email. Sign-up metadata the database
 reads: `first_name`, `last_name` (or `full_name`), `city_id`,
-`referral_code`. A profile is created automatically.
+`referral_code`. A profile is created automatically; `complete_profile`
+finishes it.
+
+Email sign-up uses a 6-digit code (`supabase/templates/confirmation.html`):
+
+```dart
+await supabase.auth.signUp(email: email, password: password);
+await supabase.auth.verifyOTP(type: OtpType.signup, email: email, token: code);
+await supabase.auth.resend(type: OtpType.signup, email: email);
+```
+
+Password reset sends a link (`recovery.html`) that opens the app; handle
+`AuthChangeEvent.passwordRecovery` with a "Choose a new password" screen
+and `supabase.auth.updateUser(UserAttributes(password: ...))`.
+
+`AuthStatus` in the app: no session → `signedOut`; signed up, code not yet
+entered → `needsVerification`; `profiles.age_confirmed_at` null →
+`needsProfile`; otherwise `signedIn`.
 
 ## Realtime — `AppServices.changes`
 

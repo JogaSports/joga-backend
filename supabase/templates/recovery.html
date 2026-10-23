@@ -1,0 +1,11 @@
+<!-- Password reset. Supabase -> Authentication -> Emails -> Templates -> Reset password
+     The link opens the app (redirect URL com.jogasports.app://login-callback),
+     which listens for AuthChangeEvent.passwordRecovery and shows "Choose a new
+     password". -->
+<div style="font-family: -apple-system, Segoe UI, Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; color: #1A1D1E;">
+  <p style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: #5E7A0E; margin: 0 0 24px;">JOGA</p>
+  <h1 style="font-size: 24px; margin: 0 0 12px;">Reset your password</h1>
+  <p style="font-size: 16px; line-height: 1.5; margin: 0 0 24px;">Tap the button on your phone to choose a new password in the Joga app.</p>
+  <p style="margin: 0 0 24px;"><a href="{{ .ConfirmationURL }}" style="display: inline-block; padding: 14px 24px; background: #C6F135; color: #1A1D1E; font-weight: 700; text-decoration: none; border-radius: 999px;">Choose a new password</a></p>
+  <p style="font-size: 14px; line-height: 1.5; color: #5B6266; margin: 0;">The link lasts an hour. If you didn't ask to reset your password, you can ignore this email; your password hasn't changed.</p>
+</div>

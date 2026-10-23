@@ -5,8 +5,8 @@ select plan(10);
 -- Not a member yet
 select tests.act_as(1);
 select is(public.is_member(), false, 'Ray starts without Joga+');
-select throws_ok($$ select * from public.my_member_stats() $$, 'members_only',
-  'deeper stats are for members');
+select isnt_empty($$ select * from public.my_member_stats() $$,
+  'deeper stats are free for everyone');
 select throws_ok($$ select public.use_streak_freeze() $$, 'members_only',
   'streak freezes are for members');
 
@@ -18,7 +18,7 @@ values (tests.user_id(1), 'active', 'app_store', now() + interval '30 days');
 select tests.act_as(1);
 select is(public.is_member(), true, 'Ray is a member');
 select is((select fee_pence from public.booking_quote(tests.game_id(101))), 0, 'members pay no booking fee');
-select isnt_empty($$ select * from public.my_member_stats() $$, 'members get deeper stats');
+select is((select fee_pence from public.booking_quote(tests.game_id(102))), 0, 'no fee on any game');
 select lives_ok($$ select public.use_streak_freeze() $$, 'a member can freeze this week');
 select throws_ok($$ select public.use_streak_freeze() $$, 'no_freezes_left', 'one freeze a month');
 

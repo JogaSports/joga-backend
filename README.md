@@ -1,10 +1,11 @@
 # joga-backend
 
 Backend for **Joga Sports**: Supabase (Postgres, Auth, Edge Functions) for
-booking organised football, tracking stats, streaks and rewards, and the
-Joga+ membership.
+booking recreational football in Wales (Cardiff, Swansea, Newport, Wrexham)
+and Bristol, tracking stats, streaks and rewards, player safety, community
+impact numbers, and the Joga+ membership.
 
-The Flutter app lives in its own repo (`joga_sports`) and talks to this
+The Flutter app lives in its own repo (`joga-app`) and talks to this
 backend through the functions and views documented in
 [`docs/API.md`](docs/API.md).
 
@@ -56,16 +57,22 @@ supabase/
     …200_functions.sql            Booking, match, stats, streak, reward logic
     …300_security.sql             Row-level security, grants, views
     …400_realtime_and_jobs.sql    Realtime publication, pg_cron jobs
+    …22…100_recreational_wales_safety_impact.sql
+                                  Welsh towns, new tags, no levels, profile
+                                  set-up, facilities, safety, impact
   seed.sql                        Local demo data (matches the app's demo)
-  tests/                          pgTAP tests: security, booking, matches, membership
+  templates/                      Auth emails: 6-digit sign-up code, password reset link
+  tests/                          pgTAP tests: security, booking, matches, membership,
+                                  profile and safety, impact
   functions/
-    create-payment/               Stripe PaymentIntent for a held space
-    stripe-webhook/               Confirms paid bookings; refunds if the space was lost
+    create-payment/               Stripe PaymentIntent for a held space (not deployed yet)
+    stripe-webhook/               Confirms paid bookings; refunds if the space was lost (not deployed yet)
     revenuecat-webhook/           Keeps Joga+ memberships in sync
     _shared/                      Stripe client and HTTP helpers
 docs/
   API.md                          Everything the app can call, with errors
   DATA_MODEL.md                   Tables and how they relate
+  GO_LIVE.md                      Production deployment, step by step
 .github/workflows/                CI (tests, checks) and deploy
 ```
 
@@ -89,6 +96,10 @@ docs/
 
 ## Booking and payment flow
 
+Card payments are on hold until the PO decides how bookings are paid; the
+Stripe functions are in the repo but switched off. This is how they work
+when switched on.
+
 ```
 App                               Database / functions                Stripe
  │ rpc hold_space(game) ─────────▶ locks game, holds a space 5 min
@@ -105,29 +116,10 @@ If wallet credit covers the whole price, the app calls
 
 ## Deploying
 
-1. Create the Supabase project (London region) and link it:
-   `supabase link --project-ref <project-id>`
-2. Push the schema: `supabase db push` (seed data is **not** pushed).
-3. Set secrets:
-   ```bash
-   supabase secrets set STRIPE_SECRET_KEY=sk_live_...
-   supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
-   supabase secrets set REVENUECAT_WEBHOOK_AUTH=<long random string>
-   ```
-4. Deploy functions: `supabase functions deploy`
-5. In Stripe, add a webhook to
-   `https://<project>.supabase.co/functions/v1/stripe-webhook` for
-   `payment_intent.succeeded`.
-6. In RevenueCat, add a webhook to `.../functions/v1/revenuecat-webhook` with
-   the Authorization header set to `REVENUECAT_WEBHOOK_AUTH`, and set the
-   app's RevenueCat user id to the Supabase user id.
-7. Turn on Apple and Google sign-in under Auth → Providers.
-8. Create the first admin: in the SQL editor,
-   `update profiles set role = 'admin' where id = '<user id>';`
-
-After that, the `Deploy` GitHub Action pushes migrations and functions on
-every merge to `main` (needs `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`
-and `SUPABASE_PROJECT_ID` repository secrets).
+Two hosted projects, **joga-staging** and **joga-prod**. Pushing to `main`
+deploys to staging; production deploys only when you run the Deploy
+workflow by hand. The full first-time setup (projects, secrets, auth, email,
+Stripe, RevenueCat, security checks) is in [`docs/GO_LIVE.md`](docs/GO_LIVE.md).
 
 ## Making changes
 
