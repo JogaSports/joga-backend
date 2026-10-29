@@ -1,8 +1,8 @@
 # joga-backend
 
 Backend for **Joga Sports**: Supabase (Postgres, Auth, Edge Functions) for
-booking recreational football in Wales (Cardiff, Swansea, Newport, Wrexham)
-and Bristol, tracking stats, streaks and rewards, player safety, community
+booking recreational football in Bristol, London, Cardiff, Nairobi and
+Tbilisi, tracking stats, streaks and rewards, player safety, community
 impact numbers, and the Joga+ membership.
 
 The Flutter app lives in its own repo (`joga-app`) and talks to this
@@ -58,12 +58,14 @@ supabase/
     …300_security.sql             Row-level security, grants, views
     …400_realtime_and_jobs.sql    Realtime publication, pg_cron jobs
     …22…100_recreational_wales_safety_impact.sql
-                                  Welsh towns, new tags, no levels, profile
-                                  set-up, facilities, safety, impact
+                                  New tags, no levels, profile set-up,
+                                  facilities, safety, impact
+    …29…100_launch_cities.sql     Launch cities with country, timezone and
+                                  currency; Welsh towns retired
   seed.sql                        Local demo data (matches the app's demo)
   templates/                      Auth emails: 6-digit sign-up code, password reset link
   tests/                          pgTAP tests: security, booking, matches, membership,
-                                  profile and safety, impact
+                                  profile and safety, impact, cities
   functions/
     create-payment/               Stripe PaymentIntent for a held space (not deployed yet)
     stripe-webhook/               Confirms paid bookings; refunds if the space was lost (not deployed yet)
@@ -73,6 +75,7 @@ docs/
   API.md                          Everything the app can call, with errors
   DATA_MODEL.md                   Tables and how they relate
   GO_LIVE.md                      Production deployment, step by step
+  DECISIONS-NEEDED.md             Product decisions the backend is waiting on
 .github/workflows/                CI (tests, checks) and deploy
 ```
 

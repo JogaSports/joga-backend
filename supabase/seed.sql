@@ -24,11 +24,13 @@ $$;
 create function pg_temp.gid(n integer) returns uuid language sql immutable as $$
   select ('20000000-0000-4000-a000-' || lpad(n::text, 12, '0'))::uuid
 $$;
--- Local time today + offset days at hh:mm, as timestamptz.
-create function pg_temp.at_local(days integer, hh integer, mm integer default 0) returns timestamptz
+-- Local time today + offset days at hh:mm, as timestamptz. UK time unless
+-- a timezone is given (Nairobi and Tbilisi games kick off on local time).
+create function pg_temp.at_local(days integer, hh integer, mm integer default 0,
+                                 tz text default 'Europe/London') returns timestamptz
 language sql stable as $$
-  select (date_trunc('day', now() at time zone 'Europe/London')
-          + make_interval(days => days, hours => hh, mins => mm)) at time zone 'Europe/London'
+  select (date_trunc('day', now() at time zone tz)
+          + make_interval(days => days, hours => hh, mins => mm)) at time zone tz
 $$;
 
 -- -----------------------------------------------------------------------------
@@ -66,23 +68,23 @@ insert into seed_people values
   (124, 'Amara',  'Obi',       null, 'cardiff', 'organiser', 'striker'),
   (125, 'Ellie',  'Morgan',    null, 'cardiff', 'player',    'defender'),
   (126, 'Grace',  'Lloyd',     null, 'cardiff', 'player',    'winger'),
-  -- Swansea, Newport and Wrexham
-  (127, 'Megan',  'Rees',      null, 'swansea', 'player',    'midfielder'),
-  (128, 'Cerys',  'Pugh',      null, 'swansea', 'organiser', 'defender'),
-  (129, 'Ffion',  'Jenkins',   null, 'newport', 'player',    'striker'),
-  (130, 'Gareth', 'Rowlands',  null, 'swansea', 'organiser', 'midfielder'),
-  (131, 'Owain',  'Hopkins',   null, 'newport', 'organiser', 'defender'),
-  (132, 'Iwan',   'Edwards',   null, 'wrexham', 'organiser', 'goalkeeper'),
-  (133, 'Lewis',  'Morris',    null, 'swansea', 'player',    'striker'),
-  (134, 'Dafydd', 'Owen',      null, 'swansea', 'player',    'winger'),
-  (135, 'Carys',  'Bevan',     null, 'swansea', 'player',    'defender'),
-  (136, 'Aled',   'Thomas',    null, 'newport', 'player',    'midfielder'),
-  (137, 'Jamal',  'Hassan',    null, 'newport', 'player',    'winger'),
-  (138, 'Siân',   'Powell',    null, 'newport', 'player',    'defender'),
-  (139, 'Steffan','Lloyd',     null, 'wrexham', 'player',    'striker'),
-  (140, 'Kai',    'Roberts',   null, 'wrexham', 'player',    'midfielder'),
-  (141, 'Bethan', 'Wynne',     null, 'wrexham', 'player',    'winger'),
-  (142, 'Rob',    'Ellis',     null, 'wrexham', 'player',    'defender');
+  -- London, Nairobi and Tbilisi
+  (127, 'Zara',   'Ahmed',     null, 'london',  'player',    'midfielder'),
+  (128, 'Chloe',  'Mensah',    null, 'london',  'organiser', 'defender'),
+  (129, 'Brian',  'Otieno',    null, 'nairobi', 'player',    'striker'),
+  (130, 'Marcus', 'Reid',      null, 'london',  'organiser', 'midfielder'),
+  (131, 'Kevin',  'Mwangi',    null, 'nairobi', 'organiser', 'defender'),
+  (132, 'Giorgi', 'Beridze',   null, 'tbilisi', 'organiser', 'goalkeeper'),
+  (133, 'Tunde',  'Bakare',    null, 'london',  'player',    'striker'),
+  (134, 'Jamie',  'Cole',      null, 'london',  'player',    'winger'),
+  (135, 'Aisha',  'Khan',      null, 'london',  'player',    'defender'),
+  (136, 'Faith',  'Wanjiru',   null, 'nairobi', 'player',    'midfielder'),
+  (137, 'Dennis', 'Kiprop',    null, 'nairobi', 'player',    'winger'),
+  (138, 'Mercy',  'Achieng',   null, 'nairobi', 'player',    'defender'),
+  (139, 'Nika',   'Kapanadze', null, 'tbilisi', 'player',    'striker'),
+  (140, 'Luka',   'Gelashvili',null, 'tbilisi', 'player',    'midfielder'),
+  (141, 'Mariam', 'Lomidze',   null, 'tbilisi', 'player',    'winger'),
+  (142, 'Davit',  'Tsiklauri', null, 'tbilisi', 'player',    'defender');
 
 -- Auth users (the sign-up trigger creates each profile).
 insert into auth.users (
@@ -145,17 +147,18 @@ insert into public.venues (id, name, city_id, address, surface, parking, facilit
      '{floodlights,changing_rooms,defibrillator,first_aid,parking}'),
   (pg_temp.vid(7),  'Ashton Park Astro',    'bristol', 'Blackmoors Lane, Bristol BS3 2JL', 'Astro · astros only',   'Free, on site',
      '{floodlights,step_free,first_aid,parking}'),
-  (pg_temp.vid(8),  'Swansea Bay 3G',       'swansea', 'Fabian Way, Swansea SA1',          '3G · moulds or astros', 'Free, on site',
-     '{floodlights,changing_rooms,step_free,accessible_toilet,defibrillator,first_aid,parking}'),
-  (pg_temp.vid(9),  'Landore Sports Cage',  'swansea', 'Neath Road, Swansea SA1',          'Astro · astros only',   'Street parking',
+  -- Made-up venues for local testing only.
+  (pg_temp.vid(8),  'Shoreditch Cage',      'london',  'Shoreditch, London E2',            'Astro · astros only',   'Street parking',
      '{floodlights,first_aid}'),
-  (pg_temp.vid(10), 'Spytty Park 3G',       'newport', 'Spytty Road, Newport NP19',        '3G · moulds or astros', 'Free, on site',
-     '{floodlights,changing_rooms,step_free,accessible_toilet,defibrillator,first_aid,parking}'),
-  (pg_temp.vid(11), 'Riverside Cage',       'newport', 'Usk Way, Newport NP20',            'Astro · astros only',   'Pay and display',
-     '{floodlights,step_free,first_aid}'),
-  (pg_temp.vid(12), 'Wrexham Community 3G', 'wrexham', 'Plas Coch Road, Wrexham LL11',     '3G · moulds or astros', 'Free, on site',
+  (pg_temp.vid(9),  'Hackney Wick 3G',      'london',  'Hackney Wick, London E9',          '3G · moulds or astros', 'Pay and display',
+     '{floodlights,changing_rooms,step_free,accessible_toilet,defibrillator,first_aid}'),
+  (pg_temp.vid(10), 'Westlands Turf',       'nairobi', 'Westlands, Nairobi',               '3G · moulds or astros', 'Free, on site',
+     '{floodlights,changing_rooms,first_aid,parking}'),
+  (pg_temp.vid(11), 'Kilimani 5s',          'nairobi', 'Kilimani, Nairobi',                'Astro · astros only',   'Street parking',
+     '{floodlights,first_aid}'),
+  (pg_temp.vid(12), 'Vake Park Pitch',      'tbilisi', 'Vake, Tbilisi',                    '3G · moulds or astros', 'Free, on site',
      '{floodlights,changing_rooms,step_free,defibrillator,first_aid,parking}'),
-  (pg_temp.vid(13), 'Acton Park Cage',      'wrexham', 'Acton, Wrexham LL12',              'Astro · astros only',   'Street parking',
+  (pg_temp.vid(13), 'Saburtalo Cage',       'tbilisi', 'Saburtalo, Tbilisi',               'Astro · astros only',   'Street parking',
      '{floodlights,first_aid}');
 
 -- -----------------------------------------------------------------------------
@@ -176,17 +179,17 @@ insert into public.games (id, format, venue_id, pitch, starts_at, tags, price_pe
   (pg_temp.gid(108), 'seven_a_side', pg_temp.vid(2),  'Pitch 1',   pg_temp.at_local(5, 18),     '{mixed}',                 600, 7000, pg_temp.uid(2)),
   (pg_temp.gid(109), 'five_a_side',  pg_temp.vid(3),  'Main cage', pg_temp.at_local(3, 20),     '{mixed}',                 700, 5500, pg_temp.uid(111)),
   (pg_temp.gid(110), 'five_a_side',  pg_temp.vid(4),  'Pitch 1',   pg_temp.at_local(2, 10, 30), '{beginner,walking}',      400, 4000, pg_temp.uid(113)),
-  -- Swansea
-  (pg_temp.gid(301), 'five_a_side',  pg_temp.vid(8),  'Pitch 2',   pg_temp.at_local(1, 19),     '{mixed}',                 700, 5000, pg_temp.uid(130)),
-  (pg_temp.gid(302), 'five_a_side',  pg_temp.vid(8),  'Pitch 1',   pg_temp.at_local(5, 11),     '{beginner,womens,casual}', 500, 5000, pg_temp.uid(128)),
-  (pg_temp.gid(303), 'five_a_side',  pg_temp.vid(9),  'Cage',      pg_temp.at_local(2, 20),     '{mixed}',                 600, 4500, pg_temp.uid(130)),
-  -- Newport
-  (pg_temp.gid(401), 'seven_a_side', pg_temp.vid(10), 'Pitch 1',   pg_temp.at_local(1, 20),     '{mixed}',                 650, 6500, pg_temp.uid(131)),
-  (pg_temp.gid(402), 'five_a_side',  pg_temp.vid(11), 'Cage',      pg_temp.at_local(3, 11),     '{beginner,walking}',      400, 3500, pg_temp.uid(131)),
-  -- Wrexham
-  (pg_temp.gid(501), 'five_a_side',  pg_temp.vid(12), 'Pitch 3',   pg_temp.at_local(2, 19, 30), '{mixed}',                 600, 5000, pg_temp.uid(132)),
-  (pg_temp.gid(502), 'seven_a_side', pg_temp.vid(13), 'Cage',      pg_temp.at_local(4, 19),     '{mixed}',                 600, 6000, pg_temp.uid(132)),
-  -- Bristol (first town outside Wales)
+  -- London
+  (pg_temp.gid(301), 'five_a_side',  pg_temp.vid(8),  'Cage',      pg_temp.at_local(1, 19),     '{mixed}',                  900,  7000, pg_temp.uid(130)),
+  (pg_temp.gid(302), 'five_a_side',  pg_temp.vid(9),  'Pitch 1',   pg_temp.at_local(5, 11),     '{beginner,womens,casual}', 700,  7000, pg_temp.uid(128)),
+  (pg_temp.gid(303), 'five_a_side',  pg_temp.vid(9),  'Pitch 2',   pg_temp.at_local(2, 20),     '{mixed}',                  900,  7000, pg_temp.uid(130)),
+  -- Nairobi (prices in Kenyan cents: 50000 = KSh 500)
+  (pg_temp.gid(401), 'seven_a_side', pg_temp.vid(10), 'Pitch 1',   pg_temp.at_local(1, 19, 0, 'Africa/Nairobi'), '{mixed}',            50000, 400000, pg_temp.uid(131)),
+  (pg_temp.gid(402), 'five_a_side',  pg_temp.vid(11), 'Cage',      pg_temp.at_local(3, 18, 0, 'Africa/Nairobi'), '{beginner,casual}',  40000, 300000, pg_temp.uid(131)),
+  -- Tbilisi (prices in tetri: 1500 = 15 GEL)
+  (pg_temp.gid(501), 'five_a_side',  pg_temp.vid(12), 'Pitch 1',   pg_temp.at_local(2, 20, 0, 'Asia/Tbilisi'),   '{mixed}',            1500,  12000, pg_temp.uid(132)),
+  (pg_temp.gid(502), 'seven_a_side', pg_temp.vid(13), 'Cage',      pg_temp.at_local(4, 20, 0, 'Asia/Tbilisi'),   '{mixed}',            1500,  14000, pg_temp.uid(132)),
+  -- Bristol
   (pg_temp.gid(201), 'five_a_side',  pg_temp.vid(5),  'Cage A',    pg_temp.at_local(1, 19, 30), '{mixed}',                 750, 5500, pg_temp.uid(109)),
   (pg_temp.gid(202), 'seven_a_side', pg_temp.vid(6),  'Pitch 2',   pg_temp.at_local(2, 20),     '{mixed}',                 650, 7000, pg_temp.uid(109)),
   (pg_temp.gid(203), 'five_a_side',  pg_temp.vid(7),  'Pitch 1',   pg_temp.at_local(3, 18),     '{casual}',                700, 5500, pg_temp.uid(109)),
@@ -309,14 +312,14 @@ $$;
 -- -----------------------------------------------------------------------------
 do $$
 declare
-  -- town, venue, organiser, regulars, tags
+  -- town, venue, organiser, regulars, tags, timezone, price (minor units)
   v_towns constant text[][] := array[
-    ['swansea', '8',  '130', '127,133,134,135,128', '{mixed}'],
-    ['swansea', '8',  '128', '127,135,128',         '{beginner,womens,casual}'],
-    ['newport', '10', '131', '129,136,137,138',     '{mixed}'],
-    ['newport', '11', '131', '136,138',             '{beginner,walking}'],
-    ['wrexham', '12', '132', '139,140,141,142',     '{mixed}'],
-    ['bristol', '6',  '109', '114,115,116,117,118,119', '{mixed}']
+    ['london',  '8',  '130', '127,133,134,135,128', '{mixed}',                  'Europe/London',  '900'],
+    ['london',  '9',  '128', '127,135,128',         '{beginner,womens,casual}', 'Europe/London',  '700'],
+    ['nairobi', '10', '131', '129,136,137,138',     '{mixed}',                  'Africa/Nairobi', '50000'],
+    ['nairobi', '11', '131', '136,138',             '{beginner,walking}',       'Africa/Nairobi', '40000'],
+    ['tbilisi', '12', '132', '139,140,141,142',     '{mixed}',                  'Asia/Tbilisi',   '1500'],
+    ['bristol', '6',  '109', '114,115,116,117,118,119', '{mixed}',              'Europe/London',  '600']
   ];
   t       integer;
   w       integer;
@@ -332,18 +335,20 @@ begin
       v_n := v_n + 1;
       v_game := pg_temp.gid(1000 + v_n);
       -- Thursday 19:00 local, 2w weeks ago (staggered by town).
-      v_start := ((date_trunc('week', now() at time zone 'Europe/London')::date - 14 * w + 3 - (t % 2) * 7)
-                  + time '19:00') at time zone 'Europe/London';
+      v_start := ((date_trunc('week', now() at time zone v_towns[t][6])::date - 14 * w + 3 - (t % 2) * 7)
+                  + time '19:00') at time zone v_towns[t][6];
       insert into public.games (id, format, venue_id, pitch, starts_at, tags, price_pence, venue_cost_pence,
                                 organiser_id, status)
       values (v_game, 'five_a_side', pg_temp.vid(v_towns[t][2]::integer), 'Pitch 1', v_start,
-              v_towns[t][5]::public.game_tag[], 600, 5000, pg_temp.uid(v_towns[t][3]::integer), 'completed');
+              v_towns[t][5]::public.game_tag[], v_towns[t][7]::integer, 5000,
+              pg_temp.uid(v_towns[t][3]::integer), 'completed');
 
       -- Newer games are busier: everyone in the last two months, fewer before.
       for k in 1 .. array_length(v_ppl, 1) loop
         continue when w > 4 and k > greatest(2, array_length(v_ppl, 1) - (w / 4));
         insert into public.bookings (game_id, player_id, price_pence, fee_pence, card_pence, created_at)
-        values (v_game, pg_temp.uid(v_ppl[k]), 600, 100, 700, v_start - interval '2 days');
+        values (v_game, pg_temp.uid(v_ppl[k]), v_towns[t][7]::integer, 100, v_towns[t][7]::integer + 100,
+                v_start - interval '2 days');
         insert into public.match_lines (game_id, player_id, team, goals, assists, attended)
         values (v_game, pg_temp.uid(v_ppl[k]), case when k % 2 = 0 then 'white' else 'orange' end::public.team,
                 (k + w) % 3, (k * w) % 2, not (k = 2 and w % 5 = 0));

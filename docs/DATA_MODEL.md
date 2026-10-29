@@ -26,7 +26,7 @@ erDiagram
 | Table | What it holds | Written by |
 |---|---|---|
 | `app_settings` | Booking fee, hold length, cancellation window, referral reward, timezone | Admin |
-| `cities` | Cardiff, Swansea, Newport, Wrexham (in Wales) and Bristol | Admin / migration |
+| `cities` | Bristol, London, Cardiff, Nairobi, Tbilisi: country, timezone, currency, display order | Admin / migration |
 | `venues` | Name, city, address, surface, parking, photo, facilities (step-free, defibrillator, first aid…) | Admin |
 | `profiles` | One per user: name, city, position, preferred foot, role, referral code, when they confirmed 18+ and agreed to the code of conduct | Sign-up trigger, `complete_profile`; player edits safe fields |
 | `games` | Sport, format, venue, time, tags (beginner, womens, mixed, walking, casual), price, capacity, venue cost, organiser | Admin |
@@ -64,3 +64,10 @@ erDiagram
 - **Impact dashboard** (`impact_dashboard`) only returns totals; no player
   ids or names. The "women" figure is the share of active players who played
   in a women's game; gender is not collected.
+- **Cities and time**: kick-off times are stored in UTC and shown in the
+  city's `timezone`. City leaderboards run on the city's clock. Weekly
+  streaks, seasons and personal stats still use `app_settings.timezone`
+  (UK), so for Nairobi and Tbilisi players a week ends at UK midnight
+  (2–4 hours after local midnight).
+- **Cities and money**: `price_pence` is in the city's currency. The booking
+  fee, rewards and wallet have no currency yet; see `DECISIONS-NEEDED.md`.

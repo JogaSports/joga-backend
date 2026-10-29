@@ -55,12 +55,18 @@ try {
 ### `game_listing` (view)
 
 Games with venue, organiser and live spaces. Columns: `id, sport, format,
-venue_id, venue_name, city_id, city_name, in_wales, address, surface,
+venue_id, venue_name, city_id, city_name, country_code, timezone, currency,
+address, surface,
 parking, facilities, photo_url, pitch, starts_at, duration_minutes, tags,
 price_pence, capacity, booked, spaces_left, organiser_id,
 organiser_first_name, organiser_last_initial, organiser_games_run, status`.
 
-- `city_id`: `cardiff`, `swansea`, `newport`, `wrexham`, `bristol`
+- `city_id`: `bristol`, `london`, `cardiff`, `nairobi`, `tbilisi`. List them
+  with `from('cities').select().eq('is_live', true).order('sort_order')`.
+- `timezone`: show `starts_at` in this zone (`Europe/London`,
+  `Africa/Nairobi`, `Asia/Tbilisi`), so a Nairobi game reads 7pm in Nairobi.
+- `currency`: `GBP`, `KES` or `GEL`. `price_pence` is in that currency's
+  minor unit (pence, Kenyan cents, tetri): `50000` in Nairobi is KSh 500.
 - `tags`: `beginner`, `womens`, `mixed`, `walking`, `casual`
 - `facilities`: `step_free`, `accessible_toilet`, `changing_rooms`,
   `defibrillator`, `first_aid`, `floodlights`, `parking`
@@ -200,7 +206,7 @@ player ids or names:
   "women_percent": 9, "womens_games": 5, "walking_games": 5,
   "average_fill_percent": 53,
   "monthly_active": [{ "year": 2026, "month": 10, "players": 30 }],
-  "towns": [{ "city_id": "swansea", "players": 5, "games": 10, "growth_percent": 25 }],
+  "towns": [{ "city_id": "nairobi", "players": 5, "games": 10, "growth_percent": 25 }],
   "sessions": [{ "type": "open", "percent": 74 }]
 }
 ```

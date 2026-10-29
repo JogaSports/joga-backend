@@ -13,7 +13,7 @@ You'll end up with:
 | RevenueCat | Sandbox purchases | Real purchases |
 | Used by | Your test builds, TestFlight | The App Store / Play Store app |
 
-The Welsh FA demo on Vercel uses fake data and never talks to either project.
+The Vercel demo uses fake data and never talks to either project.
 
 ---
 
@@ -90,7 +90,7 @@ approve.
 The workflow runs `supabase db push` (migrations only, never the seed) then
 `supabase functions deploy`.
 
-**Check:** in each project's **Database → Migrations** you see all five
+**Check:** in each project's **Database → Migrations** you see all six
 migrations, and **Edge Functions** lists `revenuecat-webhook`. The Stripe
 functions (`create-payment`, `stripe-webhook`) aren't deployed until the PO
 decides how bookings are paid.
@@ -202,7 +202,7 @@ are yours to add.
 
    ```sql
    insert into public.venues (name, city_id, address, surface, parking, facilities)
-   values ('Swansea Bay 3G', 'swansea', 'Fabian Way, Swansea SA1',
+   values ('Hackney Wick 3G', 'london', 'Hackney Wick, London E9',
            '3G · moulds or astros', 'Free, on site',
            '{floodlights,changing_rooms,step_free,defibrillator,first_aid,parking}');
    ```
@@ -217,6 +217,17 @@ are yours to add.
                              price_pence, venue_cost_pence, organiser_id)
    values ('five_a_side', '<venue id>', 'Pitch 1',
            '2026-11-05 19:00 Europe/London', '{mixed}', 700, 5000, '<organiser id>');
+   ```
+
+   For Nairobi and Tbilisi, give the start time in the city's own zone and
+   the price in its currency's minor unit (see `docs/DECISIONS-NEEDED.md`
+   before taking money there):
+
+   ```sql
+   -- KSh 500 in Nairobi, 7pm Nairobi time
+   ... '2026-11-05 19:00 Africa/Nairobi', '{mixed}', 50000, 400000, ...
+   -- 15 GEL in Tbilisi, 8pm Tbilisi time
+   ... '2026-11-05 20:00 Asia/Tbilisi', '{mixed}', 1500, 12000, ...
    ```
 
    Capacity fills in from the format (10 or 14).
